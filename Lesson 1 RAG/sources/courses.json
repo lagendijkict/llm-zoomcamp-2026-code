@@ -1,0 +1,26 @@
+[
+    {
+        "course": "machine-learning-zoomcamp",
+        "course_name": "ML Zoomcamp",
+        "path": "/json/machine-learning-zoomcamp.json",
+        "questions_count": 433
+    },
+    {
+        "course": "llm-zoomcamp",
+        "course_name": "LLM Zoomcamp",
+        "path": "/json/llm-zoomcamp.json",
+        "questions_count": 79
+    },
+        {
+        "course": "data-engineering-zoomcamp",
+        "course_name": "Data Engineering Zoomcamp",
+        "path": "/json/data-engineering-zoomcamp.json",
+        "questions_count": 393
+    },
+        {
+        "course": "mlops-zoomcamp",
+        "course_name": "MLOps Zoomcamp",
+        "path": "/json/mlops-zoomcamp.json",
+        "questions_count": 249
+    }
+]
