@@ -11,3 +11,7 @@ Approximate nearest neighbors is the most common way to implement search. It's n
 
 Text search = lexical search
 Vector search = semantic search
+
+# Lesson 4
+So in 4A questions are generated, that are evaluated to see if they are close enough to the original question. 
+In 4B these questions are answered, and evaluated to see if they are close enough to the original answer.
