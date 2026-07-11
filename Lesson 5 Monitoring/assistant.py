@@ -13,7 +13,7 @@ def create_assistant():
     documents = load_faq_data()
     index = build_index(documents)
     
-    return RAGBase(index=index,
+    return RAGWithMetrics(index=index,
                    llm_client=OpenAI())
     
 if __name__ == "__main__":

@@ -5,8 +5,11 @@ from db_save import save_conversation
 from db_feedback import save_feedback
 from judge import evaluate_relevance
 
+@st.cache_resource
+def get_assistant():
+    return create_assistant()
 
-assistant = create_assistant()
+assistant = get_assistant()
 
 st.title("Course Assistant")
 
