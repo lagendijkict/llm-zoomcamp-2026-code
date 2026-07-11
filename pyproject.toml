@@ -17,6 +17,7 @@ dependencies = [
     "requests>=2.34.2",
     "rich>=15.0.0",
     "sqlitesearch>=0.1.1",
+    "streamlit>=1.59.1",
     "tokenizers>=0.23.1",
     "toyaikit>=0.0.11",
     "tqdm>=4.68.3",
