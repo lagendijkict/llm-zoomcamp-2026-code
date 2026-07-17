@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def _require(name: str) -> str:
     val = os.environ.get(name)
