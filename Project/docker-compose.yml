@@ -1,0 +1,63 @@
+services:
+  postgres:
+    # pgvector/pgvector ships the extension pre-built for a given PG major
+    # version — pinning pg17 here matches what you're already running in
+    # your Zoomcamp Codespaces setup, avoiding a version mismatch surprise.
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rag_db}
+      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_user} -d ${POSTGRES_DB:-rag_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot ingestion job. `profiles: [tools]` keeps it out of the default
+  # `docker compose up` — you run it explicitly with
+  # `docker compose --profile tools run --rm ingest`
+  # This is the same reason you'd use an Airflow one-off task run instead
+  # of a long-running service for a batch job: it should start, do work,
+  # exit, and be rerunnable without leaving a dangling container.
+  ingest:
+    build: .
+    profiles: ["tools"]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "-m", "src.ingestion.pipeline"]
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    ports:
+      - "8501:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+
+  dashboard:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    ports:
+      - "8502:8502"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["streamlit", "run", "dashboard.py", "--server.address=0.0.0.0", "--server.port=8502"]
+
+volumes:
+  pg_data:
