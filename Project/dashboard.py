@@ -18,21 +18,32 @@ st.set_page_config(page_title="RAG Monitoring", page_icon="📊", layout="wide")
 st.title("📊 RAG Monitoring Dashboard")
 
 
+def _query_to_df(cur, sql: str, params: tuple = ()) -> pd.DataFrame:
+    """Run a query and return a DataFrame, without going through pd.read_sql
+    (which only officially supports SQLAlchemy engines, not raw psycopg
+    connections — using it directly on our connection pool triggers a
+    UserWarning on every call)."""
+    cur.execute(sql, params)
+    columns = [desc[0] for desc in cur.description]
+    return pd.DataFrame(cur.fetchall(), columns=columns)
+
+
 @st.cache_data(ttl=60)  # refresh at most once a minute — dashboard doesn't need to be real-time
 def load_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     with get_conn() as conn:
-        conversations = pd.read_sql(
-            "SELECT * FROM conversations ORDER BY created_at DESC LIMIT 5000", conn
-        )
-        feedback = pd.read_sql(
-            """
-            SELECT f.*, c.retrieval_strategy, c.model, c.created_at AS conversation_created_at
-            FROM feedback f
-            JOIN conversations c ON c.id = f.conversation_pk
-            ORDER BY f.created_at DESC LIMIT 5000
-            """,
-            conn,
-        )
+        with conn.cursor() as cur:
+            conversations = _query_to_df(
+                cur, "SELECT * FROM conversations ORDER BY created_at DESC LIMIT 5000"
+            )
+            feedback = _query_to_df(
+                cur,
+                """
+                SELECT f.*, c.retrieval_strategy, c.model, c.created_at AS conversation_created_at
+                FROM feedback f
+                JOIN conversations c ON c.id = f.conversation_pk
+                ORDER BY f.created_at DESC LIMIT 5000
+                """,
+            )
     return conversations, feedback
 
 
@@ -55,7 +66,11 @@ st.divider()
 # 1. Volume over time
 conversations["date"] = pd.to_datetime(conversations["created_at"]).dt.date
 volume_by_day = conversations.groupby("date").size().reset_index(name="count")
-st.plotly_chart(px.line(volume_by_day, x="date", y="count", title="Conversations per day"), use_container_width=True)
+volume_by_day["date"] = volume_by_day["date"].astype(str)  # e.g. "2026-07-17"
+
+fig = px.bar(volume_by_day, x="date", y="count", title="Conversations per day")
+fig.update_xaxes(type="category")
+st.plotly_chart(fig, width='stretch')
 
 col_a, col_b = st.columns(2)
 
@@ -64,7 +79,7 @@ with col_a:
     # from a retrieval strategy or context size that got slower.
     st.plotly_chart(
         px.histogram(conversations, x="response_time_s", nbins=30, title="Response time distribution"),
-        use_container_width=True,
+        width='stretch',
     )
 
     # 3. Usage by retrieval strategy — which strategy people/your test
@@ -72,7 +87,7 @@ with col_a:
     # retrieval_eval.py's offline hit-rate/MRR numbers.
     strategy_counts = conversations["retrieval_strategy"].value_counts().reset_index()
     strategy_counts.columns = ["strategy", "count"]
-    st.plotly_chart(px.pie(strategy_counts, names="strategy", values="count", title="Requests by retrieval strategy"), use_container_width=True)
+    st.plotly_chart(px.pie(strategy_counts, names="strategy", values="count", title="Requests by retrieval strategy"), width='stretch')
 
 with col_b:
     # 4. Feedback breakdown by strategy — the online signal that should
@@ -83,7 +98,7 @@ with col_b:
         fb_by_strategy["rating_label"] = fb_by_strategy["rating"].map({1: "👍", -1: "👎"})
         st.plotly_chart(
             px.bar(fb_by_strategy, x="retrieval_strategy", y="count", color="rating_label", barmode="group", title="Feedback by retrieval strategy"),
-            use_container_width=True,
+            width='stretch',
         )
     else:
         st.info("No feedback collected yet.")
@@ -95,7 +110,7 @@ with col_b:
         tokens_by_day = conversations.groupby("date")[["prompt_tokens", "completion_tokens"]].sum().reset_index()
         st.plotly_chart(
             px.bar(tokens_by_day, x="date", y=["prompt_tokens", "completion_tokens"], title="Token usage per day", barmode="stack"),
-            use_container_width=True,
+            width='stretch',
         )
 
 # 6. Slowest recent queries — actionable outlier list, not just an aggregate.

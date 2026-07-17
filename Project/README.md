@@ -41,6 +41,12 @@ This shows monitoring charts (questions asked, feedback, etc.).
 
 ---
 
+Alternative, it's also possible to run both the app & dashboard inside a Docker container by using
+```bash
+docker compose up app dashboard
+```
+In that case you might have to add the two ports for app+dashboard in the PORTS table (next to TERMINAL in VS Code): 8501 and 8502.
+
 ## Notes
 
 - Run app.py and dashboard.py in **separate terminals** — they both need to keep running.
